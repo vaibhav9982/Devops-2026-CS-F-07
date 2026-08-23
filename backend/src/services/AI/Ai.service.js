@@ -1,269 +1,38 @@
 import "dotenv/config";
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export const generateVisualization = async ({ code, language, prompt }) => {
-  const response = await ai.models.generateContent({
-    model: process.env.AI_MODEL,
+  const request = {
+    model: process.env.AI_MODEL || "gemini-3.6-flash",
+    contents: `You are an AI code visualization generator. Given the programming language, source code, and request below, understand the algorithm without executing it. The source may be incomplete; do not invent behavior.
 
-    contents: `
-You are an AI code-understanding and visualization assistant.
+Language: ${language}
+Source code:\n${code}
+User request: ${prompt}
 
-Language:
-${language}
+Return ONLY complete JSX source code, with no Markdown, JSON, or explanation. It must export exactly \`export default function GeneratedVisualization()\` and require no props. It may use only \`import React, { useState, useEffect } from "react";\` (or no import). Use inline styles and no external assets.
 
-Code:
-${code}
+Create meaningful states that explain the actual algorithm (arrays, sorting comparisons/swaps, search pointers, linked-list arrows, stack/queue operations, SVG/HTML trees and graphs, or recursion call stacks as appropriate). Include an explanation for the active state.
 
-User request:
-${prompt}
+Implement Previous, Play, Pause, Next, and Reset controls. Previous/Next must stay in bounds, Play must restart at the final state, Reset must stop playback and return to the first state, and timers must be cleaned up in useEffect.
 
-Analyze the code and determine:
+Never use any API, network request, storage, browser global, routing, backend call, filesystem access, eval, new Function, script tag, or import besides the permitted React import.`,
+  };
 
-1. What the code does.
-2. The algorithm or data structure.
-3. Important variables and state changes.
-4. Important state changes relevant to visualization.
-5. What should be visualized.
-6. How Next, Previous, Run, Pause and Reset should behave.
-7. What should happen if execution encounters an error.
-
-Generate a sequence of visualization states for the algorithm.
-
-For each meaningful visualization step, provide:
-- step number
-- short description
-- relevant variable values
-- relevant data structure state
-- elements that should be highlighted
-
-Visualization data must contain the actual values that should be displayed.
-
-For arrays:
-- Do NOT use variable references such as "arr[0]" as the displayed element.
-- Use the actual value stored at that position.
-- Example: if arr = [10, 20, 30], visualization elements should be ["10", "20", "30"].
-- Array indices and highlights should be represented separately.
-- Do not make the frontend infer or guess values from variable names.
-
-For EVERY step, the state MUST contain:
-- variables: an object containing the relevant variable values at that step
-- dataStructure: an object containing the relevant data structure state at that step
-- highlights: an array of elements that should be highlighted
-
-Do not omit any of these fields.
-Use empty objects or empty arrays when a field has no relevant value. 
-
-Keep the number of steps reasonable.
-Do not create meaningless duplicate steps.
-
-These are visualization states for the MVP, not authoritative debugger execution traces.
-
-Do not invent program behavior.
-Do not assume the code is correct.
-Distinguish compilation errors from runtime errors.
-Focus on DSA and algorithm understanding.
-
-Return the result strictly according to the provided JSON schema.
-
-Important:
-- Do not include markdown.
-- Do not include explanations outside the JSON.
-- Do not invent execution results.
-- The execution section describes code structure, not actual execution steps.
-- The steps section describes visualization states for the MVP.
-- The errors section should only contain issues you can identify from the code itself.
-- Actual runtime behavior will later come from the execution engine.
-`,
-    config: {
-      responseMimeType: "application/json",
-
-      responseSchema: {
-        type: "object",
-
-        properties: {
-          classification: {
-            type: "object",
-
-            properties: {
-              type: {
-                type: "string",
-              },
-
-              dataStructure: {
-                type: "string",
-              },
-
-              algorithm: {
-                type: "string",
-              },
-            },
-
-            required: ["type", "dataStructure", "algorithm"],
-          },
-
-          explanation: {
-            type: "object",
-
-            properties: {
-              summary: {
-                type: "string",
-              },
-            },
-
-            required: ["summary"],
-          },
-
-          variables: {
-            type: "array",
-
-            items: {
-              type: "object",
-
-              properties: {
-                name: {
-                  type: "string",
-                },
-
-                role: {
-                  type: "string",
-                },
-              },
-
-              required: ["name", "role"],
-            },
-          },
-
-          visualization: {
-            type: "object",
-
-            properties: {
-              type: {
-                type: "string",
-              },
-
-              elements: {
-                type: "array",
-
-                items: {
-                  type: "string",
-                },
-              },
-
-              importantOperations: {
-                type: "array",
-
-                items: {
-                  type: "string",
-                },
-              },
-            },
-
-            required: ["type", "elements", "importantOperations"],
-          },
-
-          execution: {
-            type: "object",
-
-            properties: {
-              hasLoop: {
-                type: "boolean",
-              },
-
-              hasCondition: {
-                type: "boolean",
-              },
-
-              hasFunctionCalls: {
-                type: "boolean",
-              },
-            },
-
-            required: ["hasLoop", "hasCondition", "hasFunctionCalls"],
-          },
-
-          errors: {
-            type: "array",
-
-            items: {
-              type: "object",
-
-              properties: {
-                type: {
-                  type: "string",
-                },
-
-                message: {
-                  type: "string",
-                },
-              },
-
-              required: ["type", "message"],
-            },
-          },
-
-          steps: {
-            type: "array",
-
-            items: {
-              type: "object",
-
-              properties: {
-                step: {
-                  type: "integer",
-                },
-
-                description: {
-                  type: "string",
-                },
-
-                state: {
-                  type: "object",
-
-                  properties: {
-                    variables: {
-                      type: "object",
-                    },
-
-                    dataStructure: {
-                      type: "object",
-                    },
-
-                    highlights: {
-                      type: "array",
-
-                      items: {
-                        type: "string",
-                      },
-                    },
-                  },
-
-                  required: ["variables", "dataStructure", "highlights"],
-                },
-              },
-
-              required: ["step", "description", "state"],
-            },
-          },
-        },
-
-        required: [
-          "classification",
-          "explanation",
-          "variables",
-          "visualization",
-          "execution",
-          "errors",
-          "steps",
-        ],
-      },
-    },
-  });
-
-  console.log("Gemini response received");
-
-  return JSON.parse(response.text);
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await ai.models.generateContent(request);
+      if (!response.text?.trim()) throw new Error("Gemini returned an empty response.");
+      return response.text.trim();
+    } catch (error) {
+      lastError = error;
+      const retryable = /\b(429|500|502|503|504|UNAVAILABLE|RESOURCE_EXHAUSTED)\b/i.test(error.message || "");
+      if (!retryable || attempt === 2) break;
+      await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)));
+    }
+  }
+  throw new Error(`Gemini generation failed: ${lastError?.message || "Unknown error"}`);
 };

@@ -3,99 +3,170 @@ import { generateVisualization } from "../services/AI/Ai.service.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
+import { validateGeneratedVisualization } from "../utils/generatedVisualizationValidator.js";
 
-export const createProject = asyncHandler(async (req, res) => {
-  const { title, prompt, language, code } = req.body;
+const requiredFields = (data) =>
+  ["title", "prompt", "language", "code"].every(
+    (field) => typeof data[field] === "string" && data[field].trim(),
+  );
 
-  if (!title || !prompt || !language || !code) {
-    throw new ApiError(400, "Please Enter all the details");
+async function createGeneratedVisualization(input) {
+  const code = await generateVisualization(input);
+
+  const validation = validateGeneratedVisualization(code);
+
+  if (!validation.valid) {
+    throw new Error(validation.reason);
   }
 
-  const result = await generateVisualization({code,language,prompt});
+  return {
+    code,
+    type: "react-jsx",
+    explanation: "AI-generated interactive visualization.",
+  };
+}
 
-  // AI workkkk but what to do fro response language and other part visualization the react code AI will generate and i have to show it in frontend side
-  const newProj = await Project.create({
+export const createProject = asyncHandler(async (req, res) => {
+  if (!requiredFields(req.body)) {
+    throw new ApiError(
+      400,
+      "title, prompt, language, and code are required.",
+    );
+  }
+
+  const { title, prompt, language, code } = req.body;
+
+  const generatedVisualization = await createGeneratedVisualization({
+    code,
+    language,
+    prompt,
+  });
+
+  const project = await Project.create({
     title,
     prompt,
     language,
     code,
-    aiAnalysis: result,
+    generatedVisualization,
     status: "completed",
     userId: req.user.id,
   });
 
   return res
     .status(201)
-    .json(new ApiResponse(201, "New Project created Successfully", newProj));
+    .json(new ApiResponse(201, "New project created successfully", project));
 });
 
 export const projects = asyncHandler(async (req, res) => {
-  const projects = await Project.find({ userId: req.user.id });
-  if (projects.length === 0) {
-    return res
-      .status(200)
-      .json(new ApiResponse(200, "You havent created any project", projects));
-  }
+  const data = await Project.find({
+    userId: req.user.id,
+  }).sort({
+    updatedAt: -1,
+  });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, "project fetched Successfully", projects));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      data.length
+        ? "Projects fetched successfully"
+        : "You have not created any projects",
+      data,
+    ),
+  );
 });
 
 export const specific_project = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const userId = req.user.id;
-  const specific_project = await Project.findOne({
-    _id: id,
-    userId: userId,
+  const project = await Project.findOne({
+    _id: req.params.id,
+    userId: req.user.id,
   });
-  if (!specific_project) {
+
+  if (!project) {
     throw new ApiError(404, "Project not found.");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, "specific project fetched", specific_project));
+    .json(new ApiResponse(200, "Project fetched successfully", project));
 });
 
 export const edit_project = asyncHandler(async (req, res) => {
-  const { title, prompt, language, code } = req.body;
+  const existing = await Project.findOne({
+    _id: req.params.id,
+    userId: req.user.id,
+  });
 
-  const updatedData = {};
-  if (title !== undefined) updatedData.title = title;
-  if (prompt !== undefined) updatedData.prompt = prompt;
-  if (language !== undefined) updatedData.language = language;
-  if (code !== undefined) updatedData.code = code;
-
-  const updateData = await Project.findOneAndUpdate(
-    { _id: req.params.id, userId: req.user.id },
-    { $set: updatedData },
-    { returnDocument: "after", runValidators: true },
-  );
-
-  if (!updateData) {
+  if (!existing) {
     throw new ApiError(404, "Project not found.");
   }
 
-  return res.status(200).json(new ApiResponse(200, "data uptaded", updateData));
+  const updatedData = {};
+
+  for (const key of ["title", "prompt", "language", "code"]) {
+    if (req.body[key] !== undefined) {
+      updatedData[key] = req.body[key];
+    }
+  }
+
+  const finalInput = {
+    title: updatedData.title ?? existing.title,
+    prompt: updatedData.prompt ?? existing.prompt,
+    language: updatedData.language ?? existing.language,
+    code: updatedData.code ?? existing.code,
+  };
+
+  if (!requiredFields(finalInput)) {
+    throw new ApiError(
+      400,
+      "title, prompt, language, and code are required.",
+    );
+  }
+
+  const sourceChanged =
+    req.body.regenerate === true ||
+    ["prompt", "language", "code"].some(
+      (key) =>
+        updatedData[key] !== undefined &&
+        updatedData[key] !== existing[key],
+    );
+
+  if (sourceChanged) {
+    updatedData.generatedVisualization =
+      await createGeneratedVisualization(finalInput);
+
+    updatedData.status = "completed";
+  }
+
+  const project = await Project.findOneAndUpdate(
+    {
+      _id: req.params.id,
+      userId: req.user.id,
+    },
+    {
+      $set: updatedData,
+    },
+    {
+      new: true,
+      runValidators: true,
+    },
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Project updated", project));
 });
 
 export const del_project = asyncHandler(async (req, res) => {
-  const {id} = req.params;
-  const userId = req.user.id;
+  const project = await Project.findOneAndDelete({
+    _id: req.params.id,
+    userId: req.user.id,
+  });
 
-  const deleted_data = await Project.findOneAndDelete(
-    {
-      _id: id,
-      userId: userId,
-    },
-    { returnDocument: "after" },
-  );
-
-  if(!deleted_data){
-    throw new ApiError(404,"nodata deleted");
+  if (!project) {
+    throw new ApiError(404, "Project not found.");
   }
 
-  return res.status(200).json(new ApiResponse(200,"project deleted",deleted_data));
-
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Project deleted", project));
 });

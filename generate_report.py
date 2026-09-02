@@ -16,6 +16,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 # -------------------------------------------------------------
 COLLEGE_NAME = "Swami Keshvanand Institute of Technology,Management & Gramothan, Jaipur"
 DEPARTMENT_NAME = "Department of Computer Science & Engineering"
+REPORT_AUTHOR_ALIASES = {
+    "mehul suthar": "Mehul Suthar",
+    "mehulsuthar817": "Mehul Suthar",
+    "vaibhav ji": "Vaibhav Sharma",
+    "vaibhav sharma": "Vaibhav Sharma",
+}
 # -------------------------------------------------------------
 def get_repo_info():
     """Extracts the exact repository name and branch reliably in GitHub Codespaces."""
@@ -84,8 +90,8 @@ def get_git_metrics(interval="weekly"):
                 current_author = None
                 continue
             # -----------------------------
-            
-            current_author = author
+
+            current_author = REPORT_AUTHOR_ALIASES.get(author.casefold(), author)
             current_date_str = date_str
             
             students[current_author]["commits"] += 1

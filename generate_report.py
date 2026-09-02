@@ -16,6 +16,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 # -------------------------------------------------------------
 COLLEGE_NAME = "Swami Keshvanand Institute of Technology,Management & Gramothan, Jaipur"
 DEPARTMENT_NAME = "Department of Computer Science & Engineering"
+REPORT_REPOSITORY_NAME = "Devops-2026-CS-F-07"
 REPORT_AUTHOR_ALIASES = {
     "mehul suthar": "Mehul Suthar",
     "mehulsuthar817": "Mehul Suthar",
@@ -25,15 +26,19 @@ REPORT_AUTHOR_ALIASES = {
 # -------------------------------------------------------------
 def get_repo_info():
     """Extracts the exact repository name and branch reliably in GitHub Codespaces."""
-    repo_name = "Project-Repository"
+    repo_name = REPORT_REPOSITORY_NAME
     branch_name = "main"
     try:
-        root_path = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], encoding='utf-8').strip()
-        repo_name = os.path.basename(root_path)
+        remote_url = subprocess.check_output(
+            ['git', 'config', '--get', 'remote.origin.url'], encoding='utf-8'
+        ).strip()
+        repo_name = remote_url.rstrip('/').split('/')[-1].replace('.git', '')
     except Exception:
         try:
-            remote_url = subprocess.check_output(['git', 'config', '--get', 'remote.origin.url'], encoding='utf-8').strip()
-            repo_name = remote_url.rstrip('/').split('/')[-1].replace('.git', '')
+            root_path = subprocess.check_output(
+                ['git', 'rev-parse', '--show-toplevel'], encoding='utf-8'
+            ).strip()
+            repo_name = os.path.basename(root_path)
         except Exception:
             repo_name = os.path.basename(os.getcwd())
     try:

@@ -16,17 +16,17 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 # -------------------------------------------------------------
 COLLEGE_NAME = "Swami Keshvanand Institute of Technology,Management & Gramothan, Jaipur"
 DEPARTMENT_NAME = "Department of Computer Science & Engineering"
-REPORT_REPOSITORY_NAME = "Devops-2026-CS-F-07"
 REPORT_AUTHOR_ALIASES = {
     "mehul suthar": "Mehul Suthar",
     "mehulsuthar817": "Mehul Suthar",
     "vaibhav ji": "Vaibhav Sharma",
     "vaibhav sharma": "Vaibhav Sharma",
+    "vaibhav9982": "Vaibhav Sharma",
 }
 # -------------------------------------------------------------
 def get_repo_info():
     """Extracts the exact repository name and branch reliably in GitHub Codespaces."""
-    repo_name = REPORT_REPOSITORY_NAME
+    repo_name = "Project-Repository"
     branch_name = "main"
     try:
         remote_url = subprocess.check_output(

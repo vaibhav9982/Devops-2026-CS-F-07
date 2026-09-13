@@ -1,5 +1,5 @@
 import Project from "../models/project.js";
-import { generateVisualization } from "../services/AI/Ai.service.js";
+import { generateVisualization } from "../services/Ai.service.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";

@@ -226,14 +226,6 @@ def generate_pdf(interval="weekly"):
         'MetaCellStyle', parent=styles['Normal'],
         fontSize=8, leading=10, textColor=colors.HexColor("#475569"), alignment=1
     )
-    marks_style = ParagraphStyle(
-        'MarksStyle', parent=styles['Normal'],
-        fontSize=9, leading=12, textColor=colors.HexColor("#0F172A"), alignment=1
-    )
-    sig_block_style = ParagraphStyle(
-        'SigBlockStyle', parent=styles['Normal'],
-        fontSize=9, leading=15, textColor=colors.HexColor("#0F172A"), alignment=0
-    )
 
     story = []
 
@@ -289,8 +281,8 @@ def generate_pdf(interval="weekly"):
     story.append(chart_image)
     story.append(Spacer(1, 6))
 
-    # 5. Detailed Commit Logs per Student WITH Vertically Merged Mentor Marks
-    story.append(Paragraph(f"3. Detailed Commit Logs & Mentor Evaluation ({interval.capitalize()})", section_style))
+    # 5. Detailed Commit Logs per Student
+    story.append(Paragraph(f"3. Detailed Commit Logs ({interval.capitalize()})", section_style))
     if not student_logs:
         story.append(Paragraph("<i>No commit logs found for this timeframe.</i>", styles['Normal']))
     else:
@@ -298,80 +290,34 @@ def generate_pdf(interval="weekly"):
             student_section = []
             student_section.append(Paragraph(f"<b>Student:</b> {html.escape(student_name)} — <i>{len(logs)} commit(s)</i>", sub_section_style))
             
-            log_table_data = [["Date", "Hash", "Commit Message", "Mentor Marks (/10)"]]
+            log_table_data = [["Date", "Hash", "Commit Message"]]
             
-            # Place the clean marking line in the first row
-            first_date, first_sha, first_msg = logs[0]
-            safe_msg = html.escape(first_msg) if first_msg else "(No commit message)"
-            log_table_data.append([
-                Paragraph(first_date, meta_cell_style),
-                Paragraph(f"<code>{first_sha}</code>", meta_cell_style),
-                Paragraph(safe_msg, msg_style),
-                Paragraph("<b>_____ / 10</b>", marks_style)
-            ])
-            
-            # Subsequent commit rows have blank placeholder for merged cell
-            for date_val, sha_val, msg_val in logs[1:]:
+            for date_val, sha_val, msg_val in logs:
                 safe_msg = html.escape(msg_val) if msg_val else "(No commit message)"
                 log_table_data.append([
                     Paragraph(date_val, meta_cell_style),
                     Paragraph(f"<code>{sha_val}</code>", meta_cell_style),
                     Paragraph(safe_msg, msg_style),
-                    ""
                 ])
             
-            num_rows = len(log_table_data)
-            log_table = Table(log_table_data, colWidths=[65, 50, 335, 90])
+            log_table = Table(log_table_data, colWidths=[65, 50, 435])
             
             t_style = [
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#475569")),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('ALIGN', (3, 0), (3, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, -1), 7.5),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
                 ('TOPPADDING', (0, 0), (-1, -1), 2.5),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-                ('ROWBACKGROUNDS', (0, 1), (2, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-                ('SPAN', (3, 1), (3, num_rows - 1)),              # Vertically merge mentor marks column
-                ('VALIGN', (3, 1), (3, num_rows - 1), 'MIDDLE'),     # Vertically center the marks line
-                ('BACKGROUND', (3, 1), (3, num_rows - 1), colors.HexColor("#FEF3C7")), # Accent for marks area
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
             ]
             
             log_table.setStyle(TableStyle(t_style))
             student_section.append(log_table)
             student_section.append(Spacer(1, 5))
-            story.append(KeepTogether(student_section))
-
-    # 6. Symmetrical Signatures
-    story.append(Spacer(1, 16))
-    
-    mentor_cell = [
-        Paragraph("<b>Name:</b> ___________________________", sig_block_style),
-        Paragraph("<b>Designation:</b> Project Mentor", sig_block_style),
-        Spacer(1, 6),
-        Paragraph("<b>Signature:</b> ________________________", sig_block_style),
-    ]
-    
-    coordinator_cell = [
-        Paragraph("<b>Name:</b> ___________________________", sig_block_style),
-        Paragraph("<b>Designation:</b> Lab Coordinator", sig_block_style),
-        Spacer(1, 6),
-        Paragraph("<b>Signature:</b> ________________________", sig_block_style),
-    ]
-
-    sig_table = Table([[mentor_cell, coordinator_cell]], colWidths=[270, 270])
-    sig_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (0, -1), 0),
-        ('LEFTPADDING', (1, 0), (1, -1), 40),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-    ]))
-    
-    story.append(KeepTogether(sig_table))
+            story.extend(student_section)
 
     doc.build(story)
     print(f"\n[SUCCESS] Generated: {doc_name}")

@@ -3,15 +3,18 @@ pipeline {
 
     environment {
         FEEDBACK_FILE = 'feedback.txt'
-        TEST_STATUS = 'NOT_RUN'
-        TEST_SUMMARY = ''
     }
 
     stages {
+
         stage('Skip Jenkins Feedback Commit') {
             steps {
                 script {
-                    def commitMessage = bat(script: 'git log -1 --pretty=%%B', returnStdout: true).trim()
+                    def commitMessage = bat(
+                        script: 'git log -1 --pretty=%%B',
+                        returnStdout: true
+                    ).trim()
+
                     if (commitMessage.contains('[skip ci]')) {
                         currentBuild.result = 'NOT_BUILT'
                         error('Skipping Jenkins-generated feedback commit')
@@ -23,8 +26,21 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 bat '''
-                    if exist frontend\\package-lock.json (cd frontend && npm ci) else (cd frontend && npm install)
-                    if exist backend\\package-lock.json (cd backend && npm ci) else (cd backend && npm install)
+                    if exist frontend\\package-lock.json (
+                        cd frontend
+                        npm ci
+                    ) else (
+                        cd frontend
+                        npm install
+                    )
+
+                    if exist backend\\package-lock.json (
+                        cd backend
+                        npm ci
+                    ) else (
+                        cd backend
+                        npm install
+                    )
                 '''
             }
         }
@@ -32,34 +48,50 @@ pipeline {
         stage('Run Automated Tests') {
             steps {
                 script {
+
                     def frontendLint = bat(
                         script: 'cd frontend && npm run lint',
                         returnStatus: true
                     )
+
                     def frontendBuild = bat(
                         script: 'cd frontend && npm run build',
                         returnStatus: true
                     )
+
                     def backendTests = bat(
                         script: 'cd backend && npm test --if-present',
                         returnStatus: true
                     )
 
                     def failedChecks = []
+
                     if (frontendLint != 0) {
                         failedChecks.add('frontend lint')
                     }
+
                     if (frontendBuild != 0) {
                         failedChecks.add('frontend build')
                     }
+
                     if (backendTests != 0) {
                         failedChecks.add('backend tests')
                     }
 
-                    env.TEST_STATUS = failedChecks.isEmpty() ? 'PASS' : 'FAIL'
-                    env.TEST_SUMMARY = failedChecks.isEmpty()
+                    def testStatus = failedChecks.isEmpty()
+                        ? 'PASS'
+                        : 'FAIL'
+
+                    def testSummary = failedChecks.isEmpty()
                         ? 'Frontend lint, frontend build, and backend tests passed.'
                         : "Failed checks: ${failedChecks.join(', ')}."
+
+                    echo "Test Status: ${testStatus}"
+                    echo "Test Summary: ${testSummary}"
+
+                    env.TEST_STATUS = testStatus
+                    env.TEST_SUMMARY = testSummary
+
                     if (!failedChecks.isEmpty()) {
                         currentBuild.result = 'FAILURE'
                     }
@@ -69,8 +101,10 @@ pipeline {
 
         stage('Generate Feedback') {
             steps {
-                bat 'node scripts\\generateFeedback.js'
-                bat 'type %FEEDBACK_FILE%'
+                bat '''
+                    node scripts\\generateFeedback.js "%TEST_STATUS%" "%TEST_SUMMARY%"
+                    type %FEEDBACK_FILE%
+                '''
             }
         }
 
@@ -89,14 +123,13 @@ pipeline {
 
         stage('Push Feedback to GitHub') {
             steps {
-                script {
-                    def targetBranch = env.BRANCH_NAME ?: 'main'
-                    withCredentials([gitUsernamePassword(
+                withCredentials([
+                    gitUsernamePassword(
                         credentialsId: 'github-token',
                         gitToolName: 'Default'
-                    )]) {
-                        bat "git push origin HEAD:${targetBranch}"
-                    }
+                    )
+                ]) {
+                    bat 'git push origin HEAD:main'
                 }
             }
         }
@@ -104,7 +137,11 @@ pipeline {
 
     post {
         always {
-            archiveArtifacts artifacts: 'feedback.txt', fingerprint: true, allowEmptyArchive: true
+            archiveArtifacts(
+                artifacts: 'feedback.txt',
+                fingerprint: true,
+                allowEmptyArchive: true
+            )
         }
     }
 }

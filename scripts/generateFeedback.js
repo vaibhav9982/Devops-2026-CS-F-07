@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+const { writeFileSync } = require('node:fs');
 
 const status = process.env.TEST_STATUS || 'NOT_RUN';
 const summary = process.env.TEST_SUMMARY || 'No test summary was provided.';

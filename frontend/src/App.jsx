@@ -1,4 +1,4 @@
-import "./App.css";
+// import "./App.css";
 // import Visualizer from "./components/Visualizer.jsx";
 
 function App() {

@@ -1,5 +1,5 @@
 import "./App.css";
-import Visualizer from "./components/Visualizer.jsx";
+// import Visualizer from "./components/Visualizer.jsx";
 
 function App() {
   const projectId = "6a88b002a0647afb810e5d62";
@@ -8,7 +8,7 @@ function App() {
     <>
       <h1>Code Visualizer</h1>
 
-      <Visualizer projectId={projectId} />
+      {/* <Visualizer projectId={projectId} /> */}
     </>
   );
 }

@@ -46,6 +46,73 @@ The frontend and backend wait for their dependencies' health checks before
 starting. MongoDB data is stored in the `mongo_data` named volume and persists
 when containers are recreated.
 
+### Deploy the frontend to Vercel and the backend to Render
+
+The app can run as a Vercel static frontend and a Render Node web service. Use
+MongoDB Atlas for the database; the MongoDB container in Docker Compose is only
+available to the local Compose network.
+
+#### 1. Create a MongoDB Atlas database
+
+Create a cluster and database user, then copy its connection string. Replace
+the password and database name, URL-encode special characters in the password,
+and keep this URI private. Configure Atlas Network Access to allow connections
+from your Render service.
+
+#### 2. Deploy the backend to Render
+
+Create a **Web Service** from this repository and configure:
+
+- Root Directory: `backend`
+- Runtime: Node
+- Build Command: `npm ci`
+- Start Command: `npm start`
+- Health Check Path: `/`
+
+Set these Render environment variables:
+
+| Name | Value |
+| --- | --- |
+| `NODE_ENV` | `production` |
+| `URI` | Your MongoDB Atlas connection string |
+| `JWT_SECRET` | A long, randomly generated secret |
+| `GEMINI_API_KEY` | Your Gemini API key, if using AI generation |
+| `AI_MODEL` | `gemini-3.6-flash` or your chosen supported model |
+| `CORS_ORIGINS` | Your Vercel production origin, e.g. `https://your-app.vercel.app` |
+
+Render provides `PORT`; the server listens on it. After deployment, verify
+`https://your-backend.onrender.com/` returns the backend status JSON and
+`https://your-backend.onrender.com/metrics` returns Prometheus metrics.
+
+#### 3. Deploy the frontend to Vercel
+
+Import the same repository into Vercel and configure:
+
+- Root Directory: `frontend`
+- Framework Preset: Vite
+- Build Command: `npm run build`
+- Output Directory: `dist`
+
+Add the `VITE_API_URL` environment variable for Production (and Preview if
+needed), set to the Render service origin with no trailing slash, e.g.
+`https://your-backend.onrender.com`. Vite embeds this value at build time, so
+redeploy after changing it. The Vercel rewrite in `frontend/vercel.json`
+supports direct navigation to React Router routes.
+
+#### 4. Verify authentication and CORS
+
+Open the Vercel site and test registration, login, and a page that loads
+projects. The frontend sends credentialed requests and the backend allows only
+origins listed in `CORS_ORIGINS`. If using Vercel preview deployments, add
+their exact origins there as a comma-separated list.
+
+For production, configure custom domains on both services under the same
+parent domain (for example, `app.example.com` and `api.example.com`) and use
+those origins for `VITE_API_URL` and `CORS_ORIGINS`. Production auth cookies
+are marked `Secure` and `SameSite=None` so separate Vercel/Render domains can
+authenticate; browsers may restrict cross-site cookies, while sibling custom
+domains share the same site.
+
 ### Open the Grafana dashboard
 
 Grafana and Prometheus start as part of the same Compose command:

@@ -1,6 +1,6 @@
 import User from "../models/user.js";
 import bcrypt from "bcrypt";
-import generateToken from "../utils/generateToken.js";
+import generateToken, { authCookieOptions } from "../utils/generateToken.js";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
@@ -51,11 +51,7 @@ export const login = asyncHandler(async (req, res) => {
 });
 
 export const logout = asyncHandler(async (req, res) => {
-    res.clearCookie("token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict"
-    });
+    res.clearCookie("token", authCookieOptions());
 
     return res.status(200).json(new ApiResponse(200, "Logout Successfully"));
 });

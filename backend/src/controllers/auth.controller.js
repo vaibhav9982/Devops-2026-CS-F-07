@@ -8,7 +8,12 @@ import ApiResponse from "../utils/ApiResponse.js";
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
 
-  if (!name || !email || !password) {
+  if (
+    !name ||
+    typeof email !== "string" ||
+    !email.trim() ||
+    !password
+  ) {
     throw new ApiError(400, "Please provide your name, email, and password.");
   }
   if (password.length < 8) {
@@ -17,7 +22,11 @@ export const registerUser = asyncHandler(async (req, res) => {
 
   const hashed_password = await bcrypt.hash(password, 10);
 
-  const newUser = await User.create({ name, email, password: hashed_password });
+  const newUser = await User.create({
+    name,
+    email: email.trim().toLowerCase(),
+    password: hashed_password,
+  });
 
   generateToken(res, newUser._id);
 
@@ -29,11 +38,11 @@ export const login = asyncHandler(async (req, res) => {
 
   const { email, password } = req.body;
 
-  if (!email || !password) {
+  if (typeof email !== "string" || !email.trim() || !password) {
     throw new ApiError(400, "Please provide your  email and password.");
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email: email.trim().toLowerCase() });
 
   if (!user) {
     throw new ApiError(401, "invalid  email or password.");

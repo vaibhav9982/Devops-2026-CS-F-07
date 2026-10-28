@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Code Visualizer
+    orgId: 1
+    folder: Code Visualizer
+    type: file
+    disableDeletion: true
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

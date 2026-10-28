@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import CreateProjectPage from './pages/CreateProjectPage.jsx';
 import ProjectPage from './pages/ProjectPage.jsx';
+import HomePage from './pages/HomePage.jsx';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -21,6 +22,7 @@ function PublicRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
       <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />

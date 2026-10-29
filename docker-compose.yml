@@ -68,6 +68,7 @@ services:
 
   k6:
     image: grafana/k6:0.54.0
+    command: ["run", "/scripts/realistic-users.js"]
     profiles:
       - loadtest
     environment:

@@ -22,8 +22,12 @@ export default function LoginPage() {
     try {
       const res = await loginUser({ email, password });
       if (res.success) {
-        await checkAuth();
-        navigate('/dashboard');
+        const authenticated = await checkAuth();
+        if (authenticated) {
+          navigate('/dashboard');
+        } else {
+          setError('Login succeeded, but your session could not be verified. Please try again.');
+        }
       } else {
         setError(res.message || 'Login failed.');
       }

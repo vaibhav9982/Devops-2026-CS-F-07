@@ -93,25 +93,23 @@ Import the same repository into Vercel and configure:
 - Build Command: `npm run build`
 - Output Directory: `dist`
 
-Add the `VITE_API_URL` environment variable for Production (and Preview if
-needed), set to the Render service origin with no trailing slash, e.g.
-`https://your-backend.onrender.com`. Vite embeds this value at build time, so
-redeploy after changing it. The Vercel rewrite in `frontend/vercel.json`
-supports direct navigation to React Router routes.
+The Vercel rewrites in `frontend/vercel.json` proxy `/api/*` requests to the
+Render backend. The frontend uses this same-origin proxy in production so
+authentication cookies are not treated as third-party cookies. No
+`VITE_API_URL` setting is needed on Vercel; redeploy after changing the
+rewrites or frontend code.
 
 #### 4. Verify authentication and CORS
 
 Open the Vercel site and test registration, login, and a page that loads
-projects. The frontend sends credentialed requests and the backend allows only
-origins listed in `CORS_ORIGINS`. If using Vercel preview deployments, add
-their exact origins there as a comma-separated list.
+projects. Production API requests go through the Vercel same-origin proxy;
+local development requests still use the configured `VITE_API_URL` or
+`http://localhost:5000`. The backend allows only origins listed in
+`CORS_ORIGINS` for direct cross-origin requests.
 
-For production, configure custom domains on both services under the same
-parent domain (for example, `app.example.com` and `api.example.com`) and use
-those origins for `VITE_API_URL` and `CORS_ORIGINS`. Production auth cookies
-are marked `Secure` and `SameSite=None` so separate Vercel/Render domains can
-authenticate; browsers may restrict cross-site cookies, while sibling custom
-domains share the same site.
+If you use a custom Vercel domain, the proxy continues to use the same-origin
+frontend URL for browser requests. Keep `CORS_ORIGINS` updated for any
+development clients that call Render directly.
 
 ### Open the Grafana dashboard
 

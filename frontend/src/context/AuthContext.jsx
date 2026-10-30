@@ -14,11 +14,15 @@ export function AuthProvider({ children }) {
   async function checkAuth() {
     try {
       const res = await getCurrentUser();
-      if (res.success) {
+      if (res.success && res.data) {
         setUser(res.data);
+        return true;
       }
+      setUser(null);
+      return false;
     } catch {
       setUser(null);
+      return false;
     } finally {
       setLoading(false);
     }
